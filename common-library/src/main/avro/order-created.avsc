@@ -1,0 +1,14 @@
+{
+  "type": "record",
+  "name": "OrderCreatedEvent",
+  "namespace": "com.kafka.mastery.event",
+  "fields": [
+    {"name": "orderId", "type": "string", "avro.java.string": "String"},
+    {"name": "correlationId", "type": "string", "avro.java.string": "String"},
+    {"name": "userId", "type": "string", "avro.java.string": "String"},
+    {"name": "amount", "type": "double"},
+    {"name": "currency", "type": "string", "avro.java.string": "String"},
+    {"name": "status", "type": "string", "avro.java.string": "String"},
+    {"name": "createdAt", "type": "long", "logicalType": "timestamp-millis"}
+  ]
+}

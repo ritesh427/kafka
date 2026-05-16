@@ -1,0 +1,11 @@
+{
+  "type": "record",
+  "name": "CartCheckedOutEvent",
+  "namespace": "com.kafka.mastery.event",
+  "fields": [
+    {"name": "cartId", "type": "string", "avro.java.string": "String"},
+    {"name": "userId", "type": "string", "avro.java.string": "String"},
+    {"name": "amount", "type": "double"},
+    {"name": "items", "type": {"type": "array", "items": "string", "avro.java.string": "String"}}
+  ]
+}

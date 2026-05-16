@@ -1,0 +1,29 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info,metrics
+      cors:
+        allowed-origins: "http://localhost:5173"
+        allowed-methods: GET
+
+server:
+  port: 8084
+
+spring:
+  application:
+    name: payment-service
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    consumer:
+      group-id: payment-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      auto-offset-reset: earliest
+      properties:
+        specific.avro.reader: true
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+    properties:
+      schema.registry.url: http://localhost:8081

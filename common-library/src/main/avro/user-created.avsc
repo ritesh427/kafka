@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "UserCreatedEvent",
+  "namespace": "com.kafka.mastery.event",
+  "fields": [
+    {"name": "userId", "type": "string", "avro.java.string": "String"},
+    {"name": "email", "type": "string", "avro.java.string": "String"},
+    {"name": "fullName", "type": "string", "avro.java.string": "String"}
+  ]
+}

@@ -1,0 +1,30 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info,metrics
+      cors:
+        allowed-origins: "http://localhost:5173"
+        allowed-methods: GET
+
+server:
+  port: 8088
+
+spring:
+  application:
+    name: user-service
+  datasource:
+    url: jdbc:postgresql://localhost:5432/ecom_db
+    username: root
+    password: password
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: io.confluent.kafka.serializers.KafkaAvroSerializer
+    properties:
+      schema.registry.url: http://localhost:8081

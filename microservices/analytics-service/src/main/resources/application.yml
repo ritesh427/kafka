@@ -1,0 +1,24 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info,metrics
+      cors:
+        allowed-origins: "http://localhost:5173"
+        allowed-methods: GET
+
+server:
+  port: 8086
+
+spring:
+  application:
+    name: analytics-service
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    streams:
+      application-id: analytics-pipeline-v1
+      properties:
+        default.key.serde: org.apache.kafka.common.serialization.Serdes$StringSerde
+        default.value.serde: io.confluent.kafka.streams.serdes.avro.SpecificAvroSerde
+        schema.registry.url: http://localhost:8081
+        commit.interval.ms: 1000

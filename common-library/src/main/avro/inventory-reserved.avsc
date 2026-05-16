@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "InventoryReservedEvent",
+  "namespace": "com.kafka.mastery.event",
+  "fields": [
+    {"name": "orderId", "type": "string", "avro.java.string": "String"},
+    {"name": "status", "type": "string", "avro.java.string": "String"},
+    {"name": "reason", "type": ["null", "string"], "default": null, "avro.java.string": "String"}
+  ]
+}

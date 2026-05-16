@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "OrderConfirmedEvent",
+  "namespace": "com.kafka.mastery.event",
+  "fields": [
+    {"name": "orderId", "type": "string", "avro.java.string": "String"},
+    {"name": "userId", "type": "string", "avro.java.string": "String"},
+    {"name": "amount", "type": "double"}
+  ]
+}

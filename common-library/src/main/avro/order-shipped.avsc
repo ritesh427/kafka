@@ -1,0 +1,10 @@
+{
+  "type": "record",
+  "name": "OrderShippedEvent",
+  "namespace": "com.kafka.mastery.event",
+  "fields": [
+    {"name": "orderId", "type": "string", "avro.java.string": "String"},
+    {"name": "trackingNumber", "type": "string", "avro.java.string": "String"},
+    {"name": "status", "type": "string", "avro.java.string": "String"}
+  ]
+}

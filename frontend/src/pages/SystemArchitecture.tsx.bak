@@ -1,0 +1,320 @@
+import React, { useState, useEffect } from 'react';
+import axios from 'axios';
+import { 
+  Database, Server, Bell, BarChart3, 
+  RotateCcw, AlertTriangle, CheckCircle2,
+  HardDrive, Terminal, Info, Zap, ShieldCheck, Mail,
+  UserCircle, Package, ShoppingCart, Truck, ArrowRight
+} from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
+
+type ServiceState = 'idle' | 'active' | 'success' | 'fail';
+
+const ArchitectureVisualizer: React.FC = () => {
+  const [stage, setStage] = useState<string>('IDLE');
+  const [logs, setLogs] = useState<string[]>(["Distributed Cockpit v2.0 Ready. Waiting for simulation trigger..."]);
+  const [loading, setLoading] = useState(false);
+  const [particles, setParticles] = useState<{ id: number, from: string, to: string, color: string }[]>([]);
+
+  const addLog = (msg: string) => setLogs(prev => [msg, ...prev].slice(0, 20));
+
+  const spawnParticle = (from: string, to: string, color: string = '#ef4444') => {
+    const id = Date.now() + Math.random();
+    setParticles(prev => [...prev, { id, from, to, color }]);
+    setTimeout(() => {
+      setParticles(prev => prev.filter(p => p.id !== id));
+    }, 2000);
+  };
+
+  const simulateFullFlow = async (scenario: 'happy' | 'pay_fail' | 'inv_fail' | 'dlq') => {
+    setLoading(true);
+    setLogs([]);
+    addLog(`🚀 INITIATING END-TO-END SIMULATION: ${scenario.toUpperCase()}`);
+    
+    // Step 1: User
+    setStage('USER_CREATE');
+    addLog("[User Service] 👤 Registering new consumer profile...");
+    spawnParticle('user', 'kafka', '#3b82f6');
+    await sleep(2000);
+
+    // Step 2: Cart
+    setStage('CART_ACTION');
+    addLog("[Cart Service] 🛒 Adding items to Redis session...");
+    spawnParticle('cart', 'kafka', '#3b82f6');
+    await sleep(2000);
+
+    // Step 3: Order + Outbox
+    setStage('ORDER_OUTBOX');
+    addLog("[Order Service] 📦 Transactional Outbox: Saving Order + Event to Postgres...");
+    
+    let userId = 'ritesh';
+    if (scenario === 'pay_fail') userId = 'fail_payment';
+    if (scenario === 'inv_fail') userId = 'fail_inventory';
+    if (scenario === 'dlq') userId = 'fail_permanent';
+
+    try {
+      await axios.post(`/api/orders/outbox?userId=${userId}&amount=850.00`);
+      
+      await sleep(1000);
+      setStage('CDC_EMIT');
+      addLog("[Debezium CDC] 🟢 WAL Log Tailed! Streaming 'order-created' to Kafka...");
+      spawnParticle('order', 'kafka', '#ef4444');
+
+      await sleep(1500);
+      setStage('SAGA_START');
+      addLog("[Kafka] ⚡ Fan-out: [payment-group] and [inventory-group] triggered.");
+      spawnParticle('kafka', 'payment', '#ef4444');
+      spawnParticle('kafka', 'inventory', '#ef4444');
+
+      await sleep(2500);
+      if (scenario === 'pay_fail') {
+        setStage('PAYMENT_FAIL');
+        addLog("[Payment Service] ❌ FAILED: Emitting rollback event...");
+        spawnParticle('payment', 'kafka', '#f97316');
+        await sleep(1500);
+        setStage('ORDER_ROLLBACK');
+        addLog("[Order Service] 🔄 Saga Rollback: Order state -> REJECTED.");
+        spawnParticle('kafka', 'order', '#f97316');
+      } else if (scenario === 'inv_fail') {
+        setStage('INV_FAIL');
+        addLog("[Inventory Service] ❌ OUT OF STOCK: Emitting rollback...");
+        spawnParticle('inventory', 'kafka', '#f97316');
+        await sleep(1500);
+        setStage('ORDER_ROLLBACK');
+        addLog("[Order Service] 🔄 Saga Rollback: Order state -> REJECTED.");
+        spawnParticle('kafka', 'order', '#f97316');
+      } else if (scenario === 'dlq') {
+        setStage('DLQ_FLOW');
+        addLog("[Notification Service] ☣️ POISON PILL! Moving to DLT...");
+        spawnParticle('kafka', 'notify', '#ef4444');
+        await sleep(1500);
+        addLog("[Kafka] Event isolated in DLQ topic. System operational.");
+      } else {
+        setStage('SAGA_SUCCESS');
+        addLog("[Order Service] ✅ Saga Complete. Order state -> CONFIRMED.");
+        spawnParticle('order', 'kafka', '#22c55e');
+
+        await sleep(1500);
+        setStage('SHIPPING');
+        addLog("[Shipping Service] 🚚 Tracking assigned. Emitting 'order-shipped'...");
+        spawnParticle('kafka', 'shipping', '#22c55e');
+        spawnParticle('shipping', 'kafka', '#22c55e');
+
+        await sleep(1500);
+        setStage('NOTIFY');
+        addLog("[Notification Service] 📧 Dispatching customer success email...");
+        spawnParticle('kafka', 'notify', '#22c55e');
+        
+        await sleep(1000);
+        setStage('COMPLETE');
+        addLog("🏁 JOURNEY COMPLETE. 100% Data Consistency across 10 services.");
+      }
+
+    } catch (err) {
+      addLog("❌ API Error: Connectivity failed.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+  return (
+    <div className="flex flex-col h-full gap-4 max-w-[1600px] mx-auto p-4 select-none">
+      
+      {/* Control Shell */}
+      <div className="bg-[#121214] p-6 rounded-3xl shadow-2xl border border-white/5 flex justify-between items-center backdrop-blur-xl">
+        <div className="flex items-center gap-4">
+          <div className="p-3 bg-red-500/10 rounded-2xl border border-red-500/20">
+            <Zap className="text-red-500 fill-red-500" size={24} />
+          </div>
+          <div>
+            <h2 className="text-xl font-black text-white tracking-tight">Phase 2: Animated Event Flows</h2>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Distributed Simulator v2</span>
+              <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+              <span className="text-[10px] font-bold text-green-500 uppercase">Live Pipeline</span>
+            </div>
+          </div>
+        </div>
+        <div className="flex gap-3 bg-black/40 p-2 rounded-2xl border border-white/5">
+          <ScenarioBtn label="Happy Flow" onClick={() => simulateFullFlow('happy')} color="hover:bg-green-500/20 text-green-500" disabled={loading} />
+          <ScenarioBtn label="Rollback" onClick={() => simulateFullFlow('pay_fail')} color="hover:bg-orange-500/20 text-orange-500" disabled={loading} />
+          <ScenarioBtn label="Poison Pill" onClick={() => simulateFullFlow('dlq')} color="hover:bg-red-500/20 text-red-500" disabled={loading} />
+        </div>
+      </div>
+
+      <div className="flex-1 flex gap-6 overflow-hidden">
+        
+        {/* The Live Map */}
+        <div className="flex-1 bg-[#0d0d0f] rounded-[40px] border border-white/5 relative overflow-hidden flex items-center justify-center p-12 shadow-inner">
+          
+          {/* Animated Particles Layer */}
+          <AnimatePresence>
+            {particles.map(p => (
+              <Particle key={p.id} from={p.from} to={p.to} color={p.color} />
+            ))}
+          </AnimatePresence>
+
+          <div className="grid grid-cols-5 w-full items-center gap-x-12 relative z-10">
+            
+            {/* Col 1: Origin */}
+            <div className="flex flex-col gap-24 items-center">
+              <Node id="user" icon={<UserCircle/>} label="User" state={stage === 'USER_CREATE' ? 'active' : stage !== 'IDLE' ? 'success' : 'idle'} sub="8088" />
+              <Node id="product" icon={<Package/>} label="Product" state={stage !== 'IDLE' ? 'success' : 'idle'} sub="8089" />
+            </div>
+
+            {/* Col 2: Buffer */}
+            <div className="flex flex-col items-center">
+               <Node id="cart" icon={<ShoppingCart/>} label="Cart" state={stage === 'CART_ACTION' ? 'active' : (stage === 'IDLE' ? 'idle' : 'success')} sub="8090" />
+            </div>
+
+            {/* Col 3: Backbone (Kafka) */}
+            <div className="flex flex-col items-center justify-center relative">
+               <div id="kafka" className={`w-32 h-32 rounded-full border-4 flex flex-col items-center justify-center transition-all duration-700 ${stage === 'IDLE' ? 'bg-slate-900 border-white/10' : 'bg-red-600 border-red-400 shadow-[0_0_80px_rgba(239,68,68,0.45)]'}`}>
+                 <Database size={40} className={stage === 'IDLE' ? 'text-white/10' : 'text-white animate-pulse'} />
+                 <span className="text-[10px] font-black text-white mt-2 uppercase tracking-tighter">Kafka</span>
+               </div>
+               
+               {/* CDC Badge */}
+               <div className={`absolute -top-12 p-2 rounded-lg border bg-[#121214] transition-all duration-1000 ${stage === 'CDC_EMIT' ? 'opacity-100 scale-110 border-blue-500 shadow-lg shadow-blue-500/20' : 'opacity-20 border-white/10'}`}>
+                  <ShieldCheck size={16} className="text-blue-500" />
+                  <span className="text-[8px] font-black ml-1 text-white uppercase">CDC</span>
+               </div>
+            </div>
+
+            {/* Col 4: Logic */}
+            <div className="flex flex-col gap-12 items-center">
+               <Node id="order" icon={<Server/>} label="Order" state={stage === 'ORDER_OUTBOX' || stage === 'SAGA_SUCCESS' || stage === 'CDC_EMIT' ? 'active' : (stage === 'COMPLETE' ? 'success' : (stage === 'ORDER_ROLLBACK' ? 'fail' : 'idle'))} sub="Outbox" />
+               <Node id="payment" icon={<RotateCcw/>} label="Payment" state={stage === 'SAGA_START' ? 'active' : (stage === 'PAYMENT_FAIL' ? 'fail' : (stage === 'IDLE' ? 'idle' : 'success'))} sub="8084" />
+               <Node id="inventory" icon={<RotateCcw/>} label="Inventory" state={stage === 'SAGA_START' ? 'active' : (stage === 'INV_FAIL' ? 'fail' : (stage === 'IDLE' ? 'idle' : 'success'))} sub="8085" />
+            </div>
+
+            {/* Col 5: Delivery */}
+            <div className="flex flex-col gap-24 items-center">
+               <Node id="shipping" icon={<Truck/>} label="Shipping" state={stage === 'SHIPPING' ? 'active' : (stage === 'COMPLETE' ? 'success' : 'idle')} sub="8091" />
+               <Node id="notify" icon={<Bell/>} label="Notification" state={stage === 'NOTIFY' ? 'active' : (stage === 'COMPLETE' ? 'success' : (stage === 'DLQ_FLOW' ? 'fail' : 'idle'))} sub="DLQ" />
+            </div>
+
+          </div>
+
+          {/* Infrastructure Background */}
+          <div className="absolute inset-0 opacity-20 pointer-events-none">
+             <div className="w-full h-full bg-[radial-gradient(#ffffff05_1px,transparent_1px)] [background-size:40px_40px]"></div>
+          </div>
+        </div>
+
+        {/* Global Terminal */}
+        <div className="w-96 flex flex-col gap-4">
+           <div className="bg-[#0d0d0f] rounded-[40px] flex-1 p-8 flex flex-col shadow-2xl border border-white/5">
+             <div className="flex items-center justify-between mb-6 border-b border-white/5 pb-4">
+               <div className="flex items-center gap-2">
+                 <Terminal size={18} className="text-red-500" />
+                 <span className="text-[11px] font-black text-white uppercase tracking-[0.2em]">Distributed Log</span>
+               </div>
+               <div className="flex gap-1.5">
+                 <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+                 <div className="w-2 h-2 rounded-full bg-slate-800"></div>
+               </div>
+             </div>
+             <div className="flex-1 overflow-y-auto space-y-4 pr-2 custom-scrollbar">
+               {logs.map((log, i) => (
+                 <motion.div 
+                   initial={{ opacity: 0, x: -10 }} 
+                   animate={{ opacity: 1, x: 0 }} 
+                   key={i} 
+                   className={`text-[11px] font-mono leading-relaxed ${i === 0 ? 'text-white pl-3 border-l-2 border-red-500' : 'text-slate-600'}`}
+                 >
+                   {log}
+                 </motion.div>
+               ))}
+             </div>
+           </div>
+
+           <div className="bg-gradient-to-br from-indigo-600 to-indigo-900 rounded-[40px] p-8 text-white relative overflow-hidden group">
+              <div className="relative z-10">
+                <div className="flex items-center gap-2 opacity-60 mb-2">
+                  <BarChart3 size={14} />
+                  <span className="text-[9px] font-black uppercase tracking-widest">Analytics Pulse</span>
+                </div>
+                <div className="text-2xl font-black font-mono tracking-tighter">$14,299.00</div>
+                <p className="text-[9px] mt-2 opacity-60 font-medium leading-relaxed">KStreams calculating global total across 10 partitions.</p>
+              </div>
+              <div className="absolute -bottom-6 -right-6 w-32 h-32 bg-white/10 rounded-full blur-2xl group-hover:scale-150 transition-transform duration-1000"></div>
+           </div>
+        </div>
+      </div>
+
+      <style>{`
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: transparent; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.05); border-radius: 10px; }
+      `}</style>
+    </div>
+  );
+};
+
+const Node = ({ icon, label, state, sub, id }: { id: string, icon: React.ReactNode, label: string, state: ServiceState, sub: string }) => {
+  const styles = {
+    idle: 'bg-[#121214] border-white/5 text-slate-600 opacity-40',
+    active: 'bg-red-500/10 border-red-500 text-red-500 scale-110 shadow-[0_0_40px_rgba(239,68,68,0.2)] z-20 border-2',
+    success: 'bg-green-500/5 border-green-500/30 text-green-500/80',
+    fail: 'bg-red-600 border-red-800 text-white animate-bounce shadow-lg shadow-red-900/40'
+  };
+
+  return (
+    <div id={id} className={`w-32 p-5 rounded-3xl border transition-all duration-700 flex flex-col items-center gap-3 ${styles[state]}`}>
+       <div className={`p-2 rounded-xl ${state === 'active' ? 'bg-red-500 text-white' : 'bg-white/5'}`}>
+         {icon}
+       </div>
+       <div className="text-center">
+         <div className="text-[10px] font-black uppercase tracking-tight leading-none mb-1">{label}</div>
+         <div className="text-[8px] font-mono opacity-40 font-bold">{sub}</div>
+       </div>
+       {state === 'success' && <CheckCircle2 size={12} className="opacity-60" />}
+       {state === 'fail' && <AlertTriangle size={12} />}
+    </div>
+  );
+};
+
+const Particle = ({ from, to, color }: { from: string, to: string, color: string }) => {
+  const [coords, setCoords] = useState({ x1: 0, y1: 0, x2: 0, y2: 0 });
+
+  useEffect(() => {
+    const fromEl = document.getElementById(from);
+    const toEl = document.getElementById(to);
+    if (fromEl && toEl) {
+      const f = fromEl.getBoundingClientRect();
+      const t = toEl.getBoundingClientRect();
+      setCoords({
+        x1: f.left + f.width / 2,
+        y1: f.top + f.height / 2,
+        x2: t.left + t.width / 2,
+        y2: t.top + t.height / 2,
+      });
+    }
+  }, [from, to]);
+
+  return (
+    <motion.div
+      initial={{ x: coords.x1, y: coords.y1, opacity: 1, scale: 1.5 }}
+      animate={{ x: coords.x2, y: coords.y2, opacity: 0, scale: 0.5 }}
+      transition={{ duration: 1.5, ease: "easeInOut" }}
+      className="fixed z-[100] w-3 h-3 rounded-full blur-[2px]"
+      style={{ backgroundColor: color, boxShadow: `0 0 15px ${color}` }}
+    />
+  );
+};
+
+const ScenarioBtn = ({ label, onClick, color, disabled }: { label: string, onClick: () => void, color: string, disabled: boolean }) => (
+  <button 
+    onClick={onClick}
+    disabled={disabled}
+    className={`${color} text-[10px] font-black uppercase tracking-[0.1em] px-5 py-2.5 rounded-xl transition-all active:scale-[0.95] disabled:opacity-30 flex items-center gap-2`}
+  >
+    <Play size={10} fill="currentColor" />
+    {label}
+  </button>
+);
+
+export default ArchitectureVisualizer;

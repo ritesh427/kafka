@@ -1,0 +1,45 @@
+management:
+  endpoints:
+    web:
+      exposure:
+        include: prometheus,health,info,metrics
+      cors:
+        allowed-origins: "http://localhost:5173"
+        allowed-methods: GET
+
+server:
+  port: 8087
+
+spring:
+  application:
+    name: notification-service
+  data:
+    redis:
+      host: localhost
+      port: 6379
+  kafka:
+    bootstrap-servers: localhost:9092,localhost:9093,localhost:9094
+    listener:
+      ack-mode: manual_immediate # Send ack immediately after listener returns
+    consumer:
+      group-id: notification-group
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: io.confluent.kafka.serializers.KafkaAvroDeserializer
+      auto-offset-reset: earliest
+      enable-auto-commit: false 
+      properties:
+        specific.avro.reader: true
+        # --- Performance Tuning Knobs ---
+        
+        # 1. Fetch Efficiency
+        fetch.min.bytes: 1024      # Minimum data to fetch (Wait until 1KB is ready)
+        fetch.max.wait.ms: 500     # Wait up to 500ms for fetch.min.bytes to be reached
+        max.partition.fetch.bytes: 1048576 # 1MB - max data per partition per fetch
+        
+        # 2. Polling Strategy
+        max.poll.records: 500      # Max records returned in a single poll()
+        max.poll.interval.ms: 300000 # 5 minutes - time allowed between polls before rebalance
+        
+        # 3. Concurrency (Handled via @KafkaListener concurrency property)
+    properties:
+      schema.registry.url: http://localhost:8081

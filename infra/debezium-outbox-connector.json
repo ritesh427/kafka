@@ -1,0 +1,25 @@
+{
+  "name": "outbox-connector",
+  "config": {
+    "connector.class": "io.debezium.connector.postgresql.PostgresConnector",
+    "tasks.max": "1",
+    "database.hostname": "postgres",
+    "database.port": "5432",
+    "database.user": "root",
+    "database.password": "password",
+    "database.dbname": "ecom_db",
+    "topic.prefix": "cdc",
+    "table.include.list": "public.outbox_events",
+    "plugin.name": "pgoutput",
+    "slot.name": "debezium_outbox_slot",
+    "publication.name": "debezium_publication",
+    
+    "transforms": "outbox",
+    "transforms.outbox.type": "io.debezium.transforms.outbox.EventRouter",
+    "transforms.outbox.table.field.event.id": "id",
+    "transforms.outbox.table.field.event.key": "aggregate_id",
+    "transforms.outbox.table.field.event.payload": "payload",
+    "transforms.outbox.route.topic.replacement": "order-created",
+    "transforms.outbox.route.by.field": "aggregate_type"
+  }
+}
